@@ -1,0 +1,114 @@
+---
+title: "Untitled"
+author: "Rong"
+date: "June 20, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r install tools}
+
+# load libraries and datasets
+# source("http://bioconductor.org/biocLite.R")
+# biocLite("Biobase")
+# biocLite("genefilter")
+# devtools::install_github("genomicsclass/GSE5859")
+#install.pacakges(rafalib)
+```
+
+```{r}
+library(tidyverse)
+library(Biobase)
+library(rafalib)
+library(genefilter)
+library(GSE5859)
+data(GSE5859)
+
+# R markdown report 1
+
+# gene expression levels  
+geneExpression = exprs(e)
+
+# print date info
+sampleInfo = pData(e)
+head(sampleInfo$date)
+
+# Output: print a table of year vs ethnic groups
+year = factor( format(sampleInfo$date,"%y") )
+tab = table(year,sampleInfo$ethnicity)
+print(tab)
+
+# Differential expression analysis
+
+##remove control genes
+out <- grep("AFFX",rownames(geneExpression))
+
+# Use a t-test to perform differential expression analysis 
+# between CEU and ASN
+eth <- sampleInfo$ethnicity
+ind<- which(eth%in%c("CEU","ASN"))
+res1 <- rowttests(geneExpression[-out,ind],droplevels(eth[ind]))
+
+# Use a t-test to perform differential expression analysis 
+# between 2002 vs 2003 within CEU
+ind <- which(year%in%c("02","03") & eth=="CEU")
+res2 <- rowttests(geneExpression[-out,ind],droplevels(year[ind]))
+
+# output: plot histograms for p-values 
+hist(res1$p, main="p-value of CEU vs ASN")
+hist(res2$p, main="p-value of 2002 vs 2003 for CEU")
+
+
+# R markdown report 2
+# remove a redundant sample
+cors <- cor(exprs(e))
+Pairs=which(abs(cors)>0.9999,arr.ind=TRUE)
+out = Pairs[which(Pairs[,1]<Pairs[,2]),,drop=FALSE]
+if(length(out[,2])>0) e=e[,-out[2]]
+# remove control probes from the analysis
+out <- grep("AFFX",featureNames(e))
+e <- e[-out,]
+
+# Create a detrended gene expression data matrix and 
+# extract the information on dates and ethnic group 
+y <- exprs(e)-rowMeans(exprs(e))
+dates <- pData(e)$date
+eth <- pData(e)$ethnicity
+
+
+# perform PCA
+s <- svd(y)
+```
+
+
+```{r}
+# output: plot MDS plot of PC1 and PC2 for ethnic groups
+cols = as.numeric(eth)
+mypar()
+plot(s$v[,1],s$v[,2],col=cols,pch=16, xlab="PC1",ylab="PC2")
+legend("bottomleft",levels(eth),col=seq(along=levels(eth)),pch=16)
+title("Ethnic groups")
+
+bootcamp.pca.dat<-data.frame(s$v[,1:2],eth)
+colnames(bootcamp.pca.dat)<-c("PC1","PC2", "Ethicity")
+
+ggplot(bootcamp.pca.dat, aes(x=PC1, y=PC2, color=eth))+geom_point()+theme_classic(20)+theme(legend.position = "bottom")
+
+
+#ggplot(bootcamp.pca.dat, aes(x=PC1, y=PC2, color=year))+geom_point()+theme_classic(20)+theme(legend.position = "bottom")
+
+
+
+# output: plot PC1 and PC2 for years
+cols = as.numeric(year)
+mypar()
+plot(s$v[,1],s$v[,2],col=cols,pch=16, xlab="PC1",ylab="PC2")
+legend("bottomleft",levels(year),col=seq(along=levels(year)),pch=16)
+title("Years")
+
+
+```
