@@ -7,3 +7,6 @@ output:
 ---
 
 Welcome to my research website.
+
+[link](bootcamp.html)
+[link](bootcamp2.html)
